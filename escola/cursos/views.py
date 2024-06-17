@@ -31,19 +31,29 @@ class AvaliacaoAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         if self.kwargs.get('curso_pk'):
-            return get_object_or_404(self.get_queryset(), curso_id = self.kwargs.get('curso_pk'), pk = self.kwargs.get('avaliacao_pk'))
-        return get_object_or_404(self.get_queryset(), pk = self.kwargs.get('avaliacao_pk'))
+            return get_object_or_404(self.get_queryset(), curso_id=self.kwargs.get('curso_pk'), pk=self.kwargs.get('avaliacao_pk'))
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs.get('avaliacao_pk'))
     
 # ============================= API V2 ===============================
 
-# Lista Avaliações do Curso
+# Lista Avaliações do Cursos
 class CursoViewSet(viewsets.ModelViewSet):
     queryset = Curso.objects.all()
     serializer_class = CursoSerializer
+
     @action(detail=True, methods=['get'])
     def avaliacoes(self, request, pk=None):
-        curso = self.get_object()
-        serializer = AvaliacaoSerializer(curso.avalaicoes.all(), many=True)
+        # Pagination
+        self.pagination_class.page_size = 1
+        avaliacoes = Avaliacao.objects.filter(curso_id=pk)
+        page = self.paginate_queryset(avaliacoes)
+
+        if page is not None:
+            serializer = AvaliacaoSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+
+        serializer = AvaliacaoSerializer(avaliacoes.all(), many=True)
         return Response(serializer.data)
     
 """ VIEWSET PADRAO    
@@ -52,6 +62,7 @@ class AvaliacaoViewSet(viewsets.ModelViewSet):
     serializer_class = AvaliacaoSerializer 
 """ 
 
+# VIEWSET CUSTOMIZADA (Retirado o 'mixins.ListModelMixin')
 class AvaliacaoViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Avaliacao.objects.all()
     serializer_class = AvaliacaoSerializer
